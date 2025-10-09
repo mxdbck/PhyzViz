@@ -1,0 +1,31 @@
+[package]
+name = "PhyzViz"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "0.17.2", default-features = false, features = [
+  "bevy_winit",
+  "bevy_render",
+  "bevy_core_pipeline",
+  "bevy_post_process",
+  "bevy_sprite",
+  "png",
+  "tonemapping_luts",
+  # "x11",
+  "wayland",
+  "zstd_rust",
+  "webgl2"
+] }
+
+bevy_vector_shapes = { version = "0.11" }
+
+[profile.release-wasm]
+inherits = "release"
+# opt-level = "s"        # or "z" for even smaller, usually slightly slower
+# lto = "fat"            # better whole-program optimization for WASM
+# codegen-units = 1
+# panic = "abort"
+# strip = "symbols"
+# debug = 0
+# overflow-checks = false

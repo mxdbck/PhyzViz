@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pendulum</title>
+<style>
+  html,body { height:100%; margin:0; background:#0b0c10; color:#e8eaf0; overflow:hidden }
+  #bevy { position:fixed; inset:0; width:100dvw; height:100dvh; display:block }
+  .hint { position:fixed; top:10px; left:12px; font:13px/1.4 system-ui,sans-serif; opacity:.6 }
+</style>
+<canvas id="bevy"></canvas>
+<div class="hint">Loading…</div>
+<script type="module">
+  import init from "./pendulum.js";
+  init().then(() => document.querySelector('.hint')?.remove())
+        .catch(e => (console.error(e),
+          document.querySelector('.hint').textContent = "Failed to load"));
+</script>
+</html>
