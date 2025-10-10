@@ -22,10 +22,9 @@ bevy_vector_shapes = { version = "0.11" }
 
 [profile.release-wasm]
 inherits = "release"
-# opt-level = "s"        # or "z" for even smaller, usually slightly slower
-# lto = "fat"            # better whole-program optimization for WASM
-# codegen-units = 1
-# panic = "abort"
-# strip = "symbols"
-# debug = 0
-# overflow-checks = false
+opt-level = 3       # prioritize speed
+lto = "fat"         # cross-crate inlining/DCE (often helps perf)
+codegen-units = 1   # helps LTO, improves perf
+panic = "abort"
+debug = 0
+strip = "symbols"

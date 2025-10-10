@@ -6,17 +6,14 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly main: (a: number, b: number) => number;
-  readonly __externref_table_alloc: () => number;
-  readonly __wbindgen_export_1: WebAssembly.Table;
-  readonly __wbindgen_exn_store: (a: number) => void;
-  readonly __wbindgen_malloc: (a: number, b: number) => number;
-  readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-  readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-  readonly __wbindgen_export_6: WebAssembly.Table;
-  readonly closure14546_externref_shim: (a: number, b: number, c: any) => void;
-  readonly closure14554_externref_shim: (a: number, b: number, c: any, d: any) => void;
-  readonly closure89141_externref_shim: (a: number, b: number, c: any) => void;
-  readonly wasm_bindgen__convert__closures_____invoke__h46acaa3bb789e67d: (a: number, b: number) => void;
+  readonly __wbindgen_export_0: (a: number) => void;
+  readonly __wbindgen_export_1: (a: number, b: number) => number;
+  readonly __wbindgen_export_2: (a: number, b: number, c: number, d: number) => number;
+  readonly __wbindgen_export_3: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_export_4: WebAssembly.Table;
+  readonly __wbindgen_export_5: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_export_6: (a: number, b: number) => void;
+  readonly __wbindgen_export_7: (a: number, b: number, c: number, d: number) => void;
   readonly __wbindgen_start: () => void;
 }
 
