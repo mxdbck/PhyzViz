@@ -13,4 +13,4 @@ PhyzViz : library of small apps to vizualize simulations of different mathematic
  - [ ] Symplectic integrators.
 
 ### Notes
-- Currently only RK4 is implemented.
+- Currently only RK4 is implemented (very poorly).
