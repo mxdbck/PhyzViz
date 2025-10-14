@@ -7,7 +7,9 @@ name = "PhyzViz"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_hanabi",
  "bevy_vector_shapes",
+ "log",
 ]
 
 [[package]]
@@ -160,6 +162,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d38a7a952d7eda94a2a9fa86603be7da3ecb2b5cc0b8341b8131edbf6e32201"
 
 [[package]]
+name = "anyhow"
+version = "1.0.100"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
+
+[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -302,6 +310,12 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "base64"
+version = "0.21.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
+
+[[package]]
+name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
@@ -411,7 +425,7 @@ dependencies = [
  "futures-lite",
  "js-sys",
  "parking_lot",
- "ron",
+ "ron 0.10.1",
  "serde",
  "stackfuture",
  "thiserror 2.0.17",
@@ -622,6 +636,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_hanabi"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1398ccc1698633a35a4cf65c64f5c71dfd9d131d2e3e9e2fb85f156b6f66586"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "bitflags 2.9.4",
+ "bytemuck",
+ "fixedbitset",
+ "naga",
+ "naga_oil",
+ "rand",
+ "rand_pcg",
+ "ron 0.8.1",
+ "serde",
+ "thiserror 2.0.17",
+ "typetag",
+ "wgpu",
+]
+
+[[package]]
 name = "bevy_image"
 version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -704,6 +740,7 @@ dependencies = [
  "bevy_gizmos",
  "bevy_image",
  "bevy_input",
+ "bevy_log",
  "bevy_math",
  "bevy_mesh",
  "bevy_pbr",
@@ -3001,6 +3038,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand_pcg"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b48ac3f7ffaab7fac4d2376632268aa5f89abdb55f7ebf8f4d11fffccb2320f7"
+dependencies = [
+ "rand_core",
+]
+
+[[package]]
 name = "range-alloc"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3073,11 +3119,23 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 
 [[package]]
 name = "ron"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
+dependencies = [
+ "base64 0.21.7",
+ "bitflags 2.9.4",
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
+name = "ron"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "beceb6f7bf81c73e73aeef6dd1356d9a1b2b4909e1f0fc3e59b034f9572d7b7f"
 dependencies = [
- "base64",
+ "base64 0.22.1",
  "bitflags 2.9.4",
  "serde",
  "serde_derive",
@@ -3565,6 +3623,30 @@ name = "typeid"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc7d623258602320d5c55d1bc22793b57daff0ec7efc270ea7d55ce1d5f5471c"
+
+[[package]]
+name = "typetag"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be2212c8a9b9bcfca32024de14998494cf9a5dfa59ea1b829de98bac374b86bf"
+dependencies = [
+ "erased-serde",
+ "inventory",
+ "once_cell",
+ "serde",
+ "typetag-impl",
+]
+
+[[package]]
+name = "typetag-impl"
+version = "0.2.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27a7a9b72ba121f6f1f6c3632b85604cac41aedb5ddc70accbebb6cac83de846"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "typewit"

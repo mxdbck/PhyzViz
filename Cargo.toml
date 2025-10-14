@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
 bevy = { version = "0.17.2", default-features = false, features = [
   "bevy_winit",
   "bevy_render",
@@ -17,6 +18,7 @@ bevy = { version = "0.17.2", default-features = false, features = [
   "zstd_rust",
   "webgl2"
 ] }
+bevy_hanabi = "0.17.0"
 
 bevy_vector_shapes = { version = "0.11" }
 
