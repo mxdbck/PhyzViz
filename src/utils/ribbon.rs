@@ -1,10 +1,4 @@
 use bevy::prelude::*;
-use bevy::window::PresentMode;
-use bevy::time::{Fixed, TimePlugin};
-use bevy::color::palettes::css::*;
-use bevy_vector_shapes::prelude::*;
-use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-use std::time::Duration;
 use bevy::math::vec4;
 use bevy_hanabi::prelude::*;
 

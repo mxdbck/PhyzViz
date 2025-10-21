@@ -97,6 +97,7 @@ fn step_lorenz(time_fixed: Res<Time<Fixed>>, mut state: ResMut<LorenzState>) {
 
     let y0 = vec![state.x, state.y, state.z];
     let y1 = rk4::rk4(&state.params, t, y0, dt);
+
     state.x = y1[0];
     state.y = y1[1];
     state.z = y1[2];

@@ -13,8 +13,6 @@ use bevy::{
     post_process::bloom::{Bloom},
 };
 
-
-
 struct SimplePendulum {
     length: f32,
     gravity: f32,

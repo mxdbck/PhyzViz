@@ -4,9 +4,11 @@ use bevy::time::{Fixed, TimePlugin};
 use bevy::color::palettes::css::*;
 use bevy_vector_shapes::prelude::*;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-use std::time::Duration;
+use std::time::{self, Duration};
 use bevy::math::vec4;
 use bevy_hanabi::prelude::*;
+
+use bevy::ui::UiPlugin;
 
 use PhyzViz::utils::ODEs;
 use PhyzViz::utils::rk4;
@@ -15,6 +17,20 @@ use bevy::{
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
     post_process::bloom::{Bloom},
 };
+
+use bevy::{
+    dev_tools::fps_overlay::{FpsOverlayConfig, FpsOverlayPlugin, FrameTimeGraphConfig},
+    text::FontSmoothing,
+};
+
+struct OverlayColor;
+
+impl OverlayColor {
+    const RED: Color = Color::srgb(1.0, 0.0, 0.0);
+    const GREEN: Color = Color::srgb(0.0, 1.0, 0.0);
+}
+
+
 
 const RENDER_SCALE: f32 = 80.0;
 // Ribbon parameters
@@ -114,7 +130,10 @@ fn step_pendulum(time_fixed: Res<Time<Fixed>>, mut state: ResMut<PendulumState>)
     let t = time_fixed.elapsed_secs() / 4.0;
 
     let y0 = vec![state.theta1, state.omega1, state.theta2, state.omega2];
+
+    let t0 = time_fixed.elapsed_secs();
     let y1 = rk4::rk4(&state.params, t, y0, dt);
+    let t1 = time_fixed.elapsed_secs();
     state.theta1 = y1[0];
     state.omega1 = y1[1];
     state.theta2 = y1[2];
@@ -223,7 +242,33 @@ fn main() {
         .insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f64(1.0 / 120.0)))
         .add_plugins(Shape2dPlugin::default())
         .add_plugins(HanabiPlugin)
-        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins((
+            FpsOverlayPlugin {
+                config: FpsOverlayConfig {
+                    text_config: TextFont {
+                        // Here we define size of our overlay
+                        font_size: 42.0,
+                        // If we want, we can use a custom font
+                        font: default(),
+                        // We could also disable font smoothing,
+                        font_smoothing: FontSmoothing::default(),
+                        ..default()
+                    },
+                    // We can also change color of the overlay
+                    text_color: OverlayColor::GREEN,
+                    // We can also set the refresh interval for the FPS counter
+                    refresh_interval: core::time::Duration::from_millis(100),
+                    enabled: true,
+                    frame_time_graph_config: FrameTimeGraphConfig {
+                        enabled: true,
+                        // The minimum acceptable fps
+                        min_fps: 30.0,
+                        // The target fps
+                        target_fps: 144.0,
+                    },
+                },
+            },
+        ))
         .insert_resource(ClearColor(bevy::prelude::Color::Srgba(BLACK)))
         .add_systems(Startup, setup)
         // Physics on a fixed timestep
