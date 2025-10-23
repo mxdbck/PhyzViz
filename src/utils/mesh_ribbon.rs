@@ -83,7 +83,6 @@ pub fn update_ribbon_mesh(
     let width = ribbon.params.width;
     let mut vertices = Vec::new();
     let mut normals = Vec::new();
-    let mut uvs = Vec::new();
     let mut colors = Vec::new();
     let mut indices = Vec::new();
 
@@ -108,10 +107,8 @@ pub fn update_ribbon_mesh(
 
         let half_width = width * 0.5;
 
-        let left = (*pos + perpendicular * half_width * progress.powi(2));
-        let right = (*pos - perpendicular * half_width * progress.powi(2));
-
-
+        let left = *pos + perpendicular * half_width * progress.powi(2);
+        let right = *pos - perpendicular * half_width * progress.powi(2);
 
         vertices.push([left.x, left.y, left.z]);
         vertices.push([right.x, right.y, right.z]);
@@ -119,10 +116,6 @@ pub fn update_ribbon_mesh(
         // Normals pointing toward camera (for 2D)
         normals.push([0.0, 0.0, 1.0]);
         normals.push([0.0, 0.0, 1.0]);
-
-        // UVs
-        uvs.push([0.0, progress]);
-        uvs.push([1.0, progress]);
 
         // Colors with fade
         let alpha = if ribbon.params.fade_to_transparent {
@@ -151,7 +144,6 @@ pub fn update_ribbon_mesh(
     if let Some(mesh) = meshes.get_mut(&ribbon.mesh_handle) {
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
         mesh.insert_indices(Indices::U32(indices));
     }
