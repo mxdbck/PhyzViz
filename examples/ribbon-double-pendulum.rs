@@ -1,42 +1,21 @@
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy::time::{Fixed, TimePlugin};
-use bevy::color::palettes::css::*;
 use bevy_vector_shapes::prelude::*;
-use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
-use std::time::{self, Duration};
-use bevy::math::vec4;
-use bevy_hanabi::prelude::*;
-
-use bevy::ui::UiPlugin;
+use std::time::Duration;
 
 use PhyzViz::utils::ODEs;
 use PhyzViz::utils::rk4;
-use PhyzViz::utils::ribbon::{spawn_ribbon_emitter, RibbonParams};
+use PhyzViz::utils::mesh_ribbon::{spawn_mesh_ribbon, MeshRibbonParams, add_ribbon_position};
 use bevy::{
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
     post_process::bloom::{Bloom},
 };
 
-use bevy::{
-    dev_tools::fps_overlay::{FpsOverlayConfig, FpsOverlayPlugin, FrameTimeGraphConfig},
-    text::FontSmoothing,
-};
-
-struct OverlayColor;
-
-impl OverlayColor {
-    const RED: Color = Color::srgb(1.0, 0.0, 0.0);
-    const GREEN: Color = Color::srgb(0.0, 1.0, 0.0);
-}
-
-
+#[cfg(feature = "fps_overlay")]
+use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
 const RENDER_SCALE: f32 = 80.0;
-// Ribbon parameters
-const RIBBON_SPAWN_RATE: f32 = 60.0;
-const RIBBON_LIFETIME: f32 = 5.0;
-const PARTICLE_CAPACITY: u32 = 500;
 
 pub struct DoublePendulum {
     pub m1: f32,
@@ -97,37 +76,34 @@ impl ODEs::ODEFunc for DoublePendulum {
 }
 
 
-fn setup(mut commands: Commands, mut effects: ResMut<Assets<EffectAsset>>) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
     commands.spawn((
         Camera2d,
-        Camera {
-            clear_color: ClearColorConfig::Custom(Color::BLACK),
-            ..default()
-        },
         Tonemapping::TonyMcMapface, // 1. Using a tonemapper that desaturates to white is recommended
         Bloom::default(),           // 2. Enable bloom for the camera
         DebandDither::Enabled,      // Optional: bloom causes gradients which cause banding
     ));
     commands.insert_resource(PendulumState { theta1: 2.899002795870406, omega1: 0.0, theta2: 1.913720799888307, omega2: 0.0, params: DoublePendulum { m1: 1.0, m2: 1.0, l1: 1.0, l2: 1.0, g: 9.81 } });
 
-    spawn_ribbon_emitter(&mut commands, &mut effects, "bob1_ribbon".to_string(), &RibbonParams {
-        lifetime: 5.0,
-        capacity: 500,
-        spawn_rate: 60.0,
-        ..Default::default()
+    // Spawn mesh ribbons (comment out particle ribbons to compare)
+    spawn_mesh_ribbon(&mut commands, &mut meshes, &mut materials, "bob1_mesh_ribbon".to_string(), MeshRibbonParams {
+        width: 3.0,
+        max_points: 1000,
+        color: Color::linear_rgba(10.0, 8.7, 10.0, 1.0),
+        fade_to_transparent: true,
     });
-    spawn_ribbon_emitter(&mut commands, &mut effects, "bob2_ribbon".to_string(), &RibbonParams {
-        lifetime: 5.0,
-        capacity: 500,
-        spawn_rate: 60.0,
-        ..Default::default()
+    spawn_mesh_ribbon(&mut commands, &mut meshes, &mut materials, "bob2_mesh_ribbon".to_string(), MeshRibbonParams {
+        width: 3.0,
+        max_points: 1000,
+        color: Color::linear_rgba(10.0, 8.7, 10.0, 1.0),
+        fade_to_transparent: true,
     });
 }
 
 
 fn step_pendulum(time_fixed: Res<Time<Fixed>>, mut state: ResMut<PendulumState>) {
-    let dt = time_fixed.delta_secs() / 4.0;
-    let t = time_fixed.elapsed_secs() / 4.0;
+    let dt = time_fixed.delta_secs() / 1.0;
+    let t = time_fixed.elapsed_secs() / 1.0;
 
     let y0 = vec![state.theta1, state.omega1, state.theta2, state.omega2];
 
@@ -144,7 +120,7 @@ fn step_pendulum(time_fixed: Res<Time<Fixed>>, mut state: ResMut<PendulumState>)
 fn draw_pendulum(
     mut painter: ShapePainter,
     state: Res<PendulumState>,
-    mut q: Query<(&mut Transform, &Name), With<ParticleEffect>>,
+    mut q_mesh: Query<(&mut PhyzViz::utils::mesh_ribbon::MeshRibbon, &Name)>,
 ) {
     painter.scale(Vec3::splat(RENDER_SCALE));
 
@@ -169,8 +145,8 @@ fn draw_pendulum(
 
     // --- rod at z = 0.0 ---
     painter.transform = base;
-    painter.thickness = 0.03;
-    painter.set_color(Color::WHITE);
+    painter.thickness = 0.05;
+    painter.set_color(Srgba { red: 4.0 * 165.0 / 255.0, green: 4.0 * 136.0 / 255.0, blue: 4.0 * 94.0 / 255.0, alpha: 1.0 });
     painter.line(pivot, bob1_pos);
 
     // --- pivot circle at z = +0.001 ---
@@ -179,7 +155,7 @@ fn draw_pendulum(
     painter.transform = t;
     painter.thickness = 0.02;
     painter.hollow = false;
-    painter.set_color(Color::srgb(0.56, 0.57, 0.64));
+    painter.set_color(Srgba { red: 4.0 * 165.0 / 255.0, green: 4.0 * 136.0 / 255.0, blue: 4.0 * 94.0 / 255.0, alpha: 1.0 });
     painter.translate(pivot);
     painter.circle(0.07);
 
@@ -194,7 +170,7 @@ fn draw_pendulum(
     // --- rod 2 at z = 0.0 ---
     painter.transform = base;
     painter.thickness = 0.03;
-    painter.set_color(Color::WHITE);
+    painter.set_color(Srgba { red: 4.0 * 165.0 / 255.0, green: 4.0 * 136.0 / 255.0, blue: 4.0 * 94.0 / 255.0, alpha: 1.0 });
     painter.line(bob1_pos, bob1_pos + bob2_pos);
 
     // --- bob circle 2 at z = +0.002 ---
@@ -208,28 +184,33 @@ fn draw_pendulum(
     // (optional) restore
     painter.transform = base;
 
-
-    // Move ribbon effects
-    for (mut transform, name) in q.iter_mut() {
-        let bob_pos = if name.as_str() == "bob1_ribbon" {
+    // Move mesh ribbon positions (update current_position field)
+    for (mut ribbon, name) in q_mesh.iter_mut() {
+        let bob_pos = if name.as_str() == "bob1_mesh_ribbon" {
             bob1_pos * RENDER_SCALE
         } else {
             (bob1_pos + bob2_pos) * RENDER_SCALE
         };
-        transform.translation = bob_pos;
+        ribbon.current_position = bob_pos;
     }
 }
 
 fn main() {
-    App::new()
+    let mut app = App::new();
+    
+    app
         // Force VSync: cap to the display refresh rate
         .add_plugins(
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    present_mode: PresentMode::Fifo, // classic VSync cap
+                    present_mode: PresentMode::AutoVsync, // classic VSync cap
+
+                    #[cfg(target_arch = "wasm32")]
                     canvas: Some("#bevy".into()),
                     // Keep the WebGL canvas exactly as big as its parent (puts the wasm module in full screen basically)
+                    #[cfg(target_arch = "wasm32")]
                     fit_canvas_to_parent: true,
+
                     resizable: true,
                     ..default()
                 }),
@@ -241,39 +222,16 @@ fn main() {
         // Set physics tick rate (e.g., 120 Hz)
         .insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f64(1.0 / 120.0)))
         .add_plugins(Shape2dPlugin::default())
-        .add_plugins(HanabiPlugin)
-        .add_plugins((
-            FpsOverlayPlugin {
-                config: FpsOverlayConfig {
-                    text_config: TextFont {
-                        // Here we define size of our overlay
-                        font_size: 42.0,
-                        // If we want, we can use a custom font
-                        font: default(),
-                        // We could also disable font smoothing,
-                        font_smoothing: FontSmoothing::default(),
-                        ..default()
-                    },
-                    // We can also change color of the overlay
-                    text_color: OverlayColor::GREEN,
-                    // We can also set the refresh interval for the FPS counter
-                    refresh_interval: core::time::Duration::from_millis(100),
-                    enabled: true,
-                    frame_time_graph_config: FrameTimeGraphConfig {
-                        enabled: true,
-                        // The minimum acceptable fps
-                        min_fps: 30.0,
-                        // The target fps
-                        target_fps: 144.0,
-                    },
-                },
-            },
-        ))
-        .insert_resource(ClearColor(bevy::prelude::Color::Srgba(BLACK)))
-        .add_systems(Startup, setup)
+        .insert_resource(ClearColor(bevy::prelude::Color::Srgba(Srgba { red: 84.0 / 255.0, green: 18.0 / 255.0, blue: 18.0 / 255.0, alpha: 1.0 })))
+        .add_systems(Startup, setup )
         // Physics on a fixed timestep
         .add_systems(FixedUpdate, step_pendulum)
         // Rendering on the variable-rate Update schedule (interpolation optional)
         .add_systems(Update, draw_pendulum)
-        .run();
+        .add_systems(Update, add_ribbon_position);
+
+    #[cfg(feature = "fps_overlay")]
+    app.add_plugins(FpsOverlayPlugin::default());
+
+    app.run();
 }

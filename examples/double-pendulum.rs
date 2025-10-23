@@ -1,3 +1,4 @@
+use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy::time::{Fixed, TimePlugin};
@@ -187,6 +188,7 @@ fn main() {
         .insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f64(1.0 / 120.0)))
         .add_plugins(Shape2dPlugin::default())
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(FpsOverlayPlugin::default())
         .insert_resource(ClearColor(bevy::prelude::Color::Srgba(BLACK)))
         .add_systems(Startup, setup)
         // Physics on a fixed timestep

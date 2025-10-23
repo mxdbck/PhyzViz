@@ -35,3 +35,7 @@ codegen-units = 1   # helps LTO, improves perf
 panic = "abort"
 debug = 0
 strip = "symbols"
+
+[features]
+default = []
+fps_overlay = []
