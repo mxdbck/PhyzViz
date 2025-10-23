@@ -102,14 +102,12 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
 
 
 fn step_pendulum(time_fixed: Res<Time<Fixed>>, mut state: ResMut<PendulumState>) {
-    let dt = time_fixed.delta_secs() / 1.0;
-    let t = time_fixed.elapsed_secs() / 1.0;
+    let dt = time_fixed.delta_secs() / 2.0;
+    let t = time_fixed.elapsed_secs() / 2.0;
 
     let y0 = vec![state.theta1, state.omega1, state.theta2, state.omega2];
 
-    let t0 = time_fixed.elapsed_secs();
     let y1 = rk4::rk4(&state.params, t, y0, dt);
-    let t1 = time_fixed.elapsed_secs();
     state.theta1 = y1[0];
     state.omega1 = y1[1];
     state.theta2 = y1[2];

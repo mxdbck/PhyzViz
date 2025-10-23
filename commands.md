@@ -1,4 +1,7 @@
-MTL HUD for frametimes :
+Example running command :
+```cargo run --release --example ribbon-double-pendulum --features fps_overlay```
+
+MTL HUD for frametimes on macos :
 ```MTL_HUD_ENABLED=1 cargo run --example ribbon-double-pendulum```
 
 
