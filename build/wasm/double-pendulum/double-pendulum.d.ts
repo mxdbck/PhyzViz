@@ -14,6 +14,7 @@ export interface InitOutput {
   readonly __wbindgen_export_5: (a: number, b: number, c: number) => void;
   readonly __wbindgen_export_6: (a: number, b: number) => void;
   readonly __wbindgen_export_7: (a: number, b: number, c: number, d: number) => void;
+  readonly __wbindgen_export_8: (a: number, b: number, c: number) => void;
   readonly __wbindgen_start: () => void;
 }
 
