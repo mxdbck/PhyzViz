@@ -15,7 +15,7 @@ use bevy::{
 #[cfg(feature = "fps_overlay")]
 use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
 
-const RENDER_SCALE: f32 = 80.0;
+const RENDER_SCALE: f32 = 60.0;
 
 pub struct DoublePendulum {
     pub m1: f32,
@@ -76,7 +76,7 @@ impl ODEs::ODEFunc for DoublePendulum {
 }
 
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>, asset_server: Res<AssetServer>) {
     commands.spawn((
         Camera2d,
         Tonemapping::TonyMcMapface, // 1. Using a tonemapper that desaturates to white is recommended
@@ -98,6 +98,15 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         color: Color::linear_rgba(10.0, 8.7, 10.0, 1.0),
         fade_to_transparent: true,
     });
+
+    let mut sprite = Sprite::from_image(asset_server.load("double-pendulum.png"));
+    sprite.color = Color::Srgba(Srgba { red: 1.5, green: 1.5, blue: 1.5, alpha: 1.0 });
+
+    // Spawn equations as a sprite in world space
+    commands.spawn((
+        sprite,
+        Transform::from_xyz(0.0, 250.0, -1.0).with_scale(Vec3::splat(0.25)),
+    ));
 }
 
 
