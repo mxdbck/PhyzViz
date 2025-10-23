@@ -1,3 +1,7 @@
+MTL HUD for frametimes :
+```MTL_HUD_ENABLED=1 cargo run --example ribbon-double-pendulum```
+
+
 Compile for wasm :
 ```RUSTFLAGS='--cfg getrandom_backend="wasm_js" -C target-feature=+simd128' \
         cargo run -r --target wasm32-unknown-unknown --example pendulum```
