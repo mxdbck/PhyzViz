@@ -38,3 +38,8 @@ wasm-opt "$OUT/${PKG}_bg.wasm" \
   -o "$OUT/${PKG}_bg.wasm.tmp" \
 && mv "$OUT/${PKG}_bg.wasm.tmp" "$OUT/${PKG}_bg.wasm"
 ```
+
+Serve build folder through python http :
+```
+cd build/
+python -m http.server
