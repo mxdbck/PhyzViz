@@ -16,7 +16,7 @@ Display wasm :
 
 
 ```
-PKG=double-pendulum
+PKG=basic-pendulum
 
 RUSTFLAGS='--cfg getrandom_backend="wasm_js" -C target-feature=+simd128' cargo build --example "$PKG" --target wasm32-unknown-unknown --profile release-wasm
 
@@ -27,7 +27,7 @@ mkdir -p "$OUT"
 wasm-bindgen --target web --out-dir "$OUT" target/wasm32-unknown-unknown/release-wasm/examples/${PKG}.wasm
 
 wasm-opt "$OUT/${PKG}_bg.wasm" \
-  -O \
+  -O3 \
   --enable-simd \
   --enable-bulk-memory \
   --enable-nontrapping-float-to-int \

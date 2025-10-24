@@ -4,9 +4,10 @@ use bevy::time::{Fixed, TimePlugin};
 use bevy_vector_shapes::prelude::*;
 use std::time::Duration;
 
-use PhyzViz::utils::ODEs;
 use PhyzViz::utils::rk4;
 use PhyzViz::utils::mesh_ribbon::{spawn_mesh_ribbon, MeshRibbonParams, add_ribbon_position};
+use PhyzViz::utils::ODEs::ODEFunc;
+use PhyzViz::utils::ODEs;
 use bevy::{
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
     post_process::bloom::{Bloom},
@@ -27,7 +28,6 @@ struct PendulumState {
     theta: f32,
     omega: f32,
     params: SimplePendulum,
-    prealloc : rk4::RK4Prealloc,
 }
 
 impl ODEs::ODEFunc for SimplePendulum {
@@ -44,51 +44,37 @@ impl ODEs::ODEFunc for SimplePendulum {
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>, asset_server: Res<AssetServer>) {
     commands.spawn((
         Camera2d,
-        Tonemapping::TonyMcMapface,
-        Bloom::default(),
-        DebandDither::Enabled,
     ));
 
-    let prealloc = rk4::RK4Prealloc {
-        y0: vec![0.0, 0.0],
-        k1: vec![0.0, 0.0],
-        k2: vec![0.0, 0.0],
-        k3: vec![0.0, 0.0],
-        k4: vec![0.0, 0.0],
-        out: vec![0.0, 0.0],
-        func: Box::new(SimplePendulum { length: 2.0, gravity: 9.81 }),
-    };
-
-    commands.insert_resource(PendulumState { theta: 2.5, omega: 0.0, params: SimplePendulum { length: 2.0, gravity: 9.81 }, prealloc });
+    commands.insert_resource(PendulumState { theta: 2.5, omega: 0.0, params: SimplePendulum { length: 2.0, gravity: 9.81 } });
 
     // Spawn mesh ribbon
-    spawn_mesh_ribbon(&mut commands, &mut meshes, &mut materials, "bob_mesh_ribbon".to_string(), MeshRibbonParams {
-        width: 3.0,
-        max_points: 1000,
-        color: Color::linear_rgba(10.0, 8.7, 10.0, 1.0),
-        fade_to_transparent: true,
-    });
+    // spawn_mesh_ribbon(&mut commands, &mut meshes, &mut materials, "bob_mesh_ribbon".to_string(), MeshRibbonParams {
+    //     width: 3.0,
+    //     max_points: 1000,
+    //     color: Color::linear_rgba(10.0, 8.7, 10.0, 1.0),
+    //     fade_to_transparent: true,
+    // });
 
     // TODO: Create a simple-pendulum.png with the equation and add it to assets/
     // For now, this will fail gracefully if the file doesn't exist
-    let mut sprite = Sprite::from_image(asset_server.load("simple-pendulum.png"));
-    sprite.color = Color::Srgba(Srgba { red: 1.5, green: 1.5, blue: 1.5, alpha: 1.0 });
-    commands.spawn((
-        sprite,
-        Transform::from_xyz(0.0, 250.0, -1.0).with_scale(Vec3::splat(0.15)),
-    ));
+    // let mut sprite = Sprite::from_image(asset_server.load("simple-pendulum.png"));
+    // sprite.color = Color::Srgba(Srgba { red: 1.5, green: 1.5, blue: 1.5, alpha: 1.0 });
+    // commands.spawn((
+    //     sprite,
+    //     Transform::from_xyz(0.0, 250.0, -1.0).with_scale(Vec3::splat(0.15)),
+    // ));
 }
 
 fn step_pendulum(time_fixed: Res<Time<Fixed>>, mut state: ResMut<PendulumState>) {
     let dt = time_fixed.delta_secs() / 2.0;
     let t = time_fixed.elapsed_secs() / 2.0;
 
-    state.prealloc.y0[0] = state.theta;
-    state.prealloc.y0[1] = state.omega;
+    let mut out = vec![0.0; 2];
+    state.params.call(t, &vec![state.theta, state.omega], &mut out);
 
-    rk4::rk4(t, dt, &mut state.prealloc);
-    state.theta = state.prealloc.out[0];
-    state.omega = state.prealloc.out[1];
+    state.theta = state.theta + out[0] * dt;
+    state.omega = state.omega + out[1] * dt;
 }
 
 fn draw_pendulum(
@@ -162,7 +148,7 @@ fn main() {
             })
             .set(TimePlugin::default()),
         )
-        .insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f64(1.0 / 120.0)))
+        .insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f64(1.0 / 60.0)))
         .add_plugins(Shape2dPlugin::default())
         .insert_resource(ClearColor(bevy::prelude::Color::Srgba(Srgba { red: 84.0 / 255.0, green: 18.0 / 255.0, blue: 18.0 / 255.0, alpha: 1.0 })))
         .add_systems(Startup, setup)
