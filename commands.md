@@ -16,7 +16,7 @@ Display wasm :
 
 
 ```
-PKG=basic-pendulum
+PKG=basic-double-pendulum
 
 RUSTFLAGS='--cfg getrandom_backend="wasm_js" -C target-feature=+simd128' cargo build --example "$PKG" --target wasm32-unknown-unknown --profile release-wasm
 
