@@ -5,7 +5,7 @@ use bevy_vector_shapes::prelude::*;
 use std::time::Duration;
 
 use PhyzViz::utils::ODEs;
-use PhyzViz::utils::rk4;
+use PhyzViz::utils::rk4::{self, RK4Prealloc};
 use PhyzViz::utils::mesh_ribbon::{spawn_mesh_ribbon, MeshRibbonParams, add_ribbon_position};
 use bevy::{
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
@@ -31,12 +31,13 @@ struct PendulumState {
     omega1: f32,       // Angular velocity of the first pendulum (radians/s)
     theta2: f32,       // Angular displacement of the second pendulum (radians)
     omega2: f32,       // Angular velocity of the second pendulum (radians/s)
-    params: DoublePendulum
+    params: DoublePendulum,
+    prealloc : RK4Prealloc,
 }
 
 // Source : https://web.mit.edu/jorloff/www/chaosTalk/double-pendulum/double-pendulum-en.html
 impl ODEs::ODEFunc for DoublePendulum {
-    fn call(&self, _t: f32, y: Vec<f32>) -> Vec<f32> {
+    fn call(&self, _t: f32, y: &Vec<f32>, out: &mut Vec<f32>) {
         // State variables
         let theta1 = y[0];
         let omega1 = y[1];
@@ -57,12 +58,17 @@ impl ODEs::ODEFunc for DoublePendulum {
         let dtheta1_dt = omega1;
         let dtheta2_dt = omega2;
 
+        out[0] = dtheta1_dt;
+        out[2] = dtheta2_dt;
+
         let domega1_dt = (
             -g * (2.0 * m1 + m2) * theta1.sin()
             - m2 * g * (theta1 - 2.0 * theta2).sin()
             - 2.0 * m2 * delta.sin()
                 * (omega2.powi(2) * l2 + omega1.powi(2) * l1 * delta.cos())
         ) / (l1 * denom);
+
+        out[1] = domega1_dt;
 
         let domega2_dt = (
             2.0 * delta.sin()
@@ -71,7 +77,7 @@ impl ODEs::ODEFunc for DoublePendulum {
                 + omega2.powi(2) * l2 * m2 * delta.cos())
         ) / (l2 * denom);
 
-        vec![dtheta1_dt, domega1_dt, dtheta2_dt, domega2_dt]
+        out[3] = domega2_dt;
     }
 }
 
@@ -83,7 +89,18 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         Bloom::default(),           // 2. Enable bloom for the camera
         DebandDither::Enabled,      // Optional: bloom causes gradients which cause banding
     ));
-    commands.insert_resource(PendulumState { theta1: 2.899002795870406, omega1: 0.0, theta2: 1.913720799888307, omega2: 0.0, params: DoublePendulum { m1: 1.0, m2: 1.0, l1: 1.0, l2: 1.0, g: 9.81 } });
+
+    let prealloc = rk4::RK4Prealloc {
+        y0: vec![0.0; 4],
+        k1: vec![0.0; 4],
+        k2: vec![0.0; 4],
+        k3: vec![0.0; 4],
+        k4: vec![0.0; 4],
+        out: vec![0.0; 4],
+        func: Box::new(DoublePendulum { m1: 1.0, m2: 1.0, l1: 1.0, l2: 1.0, g: 9.81 }),
+    };
+
+    commands.insert_resource(PendulumState { theta1: 2.899002795870406, omega1: 0.0, theta2: 1.913720799888307, omega2: 0.0, params: DoublePendulum { m1: 1.0, m2: 1.0, l1: 1.0, l2: 1.0, g: 9.81 }, prealloc });
 
     // Spawn mesh ribbons (comment out particle ribbons to compare)
     spawn_mesh_ribbon(&mut commands, &mut meshes, &mut materials, "bob1_mesh_ribbon".to_string(), MeshRibbonParams {
@@ -114,13 +131,17 @@ fn step_pendulum(time_fixed: Res<Time<Fixed>>, mut state: ResMut<PendulumState>)
     let dt = time_fixed.delta_secs() / 2.0;
     let t = time_fixed.elapsed_secs() / 2.0;
 
-    let y0 = vec![state.theta1, state.omega1, state.theta2, state.omega2];
+    // let y0 = vec![state.theta1, state.omega1, state.theta2, state.omega2];
+    state.prealloc.y0[0] = state.theta1;
+    state.prealloc.y0[1] = state.omega1;
+    state.prealloc.y0[2] = state.theta2;
+    state.prealloc.y0[3] = state.omega2;
 
-    let y1 = rk4::rk4(&state.params, t, y0, dt);
-    state.theta1 = y1[0];
-    state.omega1 = y1[1];
-    state.theta2 = y1[2];
-    state.omega2 = y1[3];
+    rk4::rk4(t, dt, &mut state.prealloc);
+    state.theta1 = state.prealloc.out[0];
+    state.omega1 = state.prealloc.out[1];
+    state.theta2 = state.prealloc.out[2];
+    state.omega2 = state.prealloc.out[3];
 }
 
 
@@ -226,8 +247,6 @@ fn main() {
             // Make sure FixedUpdate is enabled (it is by default, but showing explicitly)
             .set(TimePlugin::default()),
         )
-        // Set physics tick rate (e.g., 120 Hz)
-        .insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f64(1.0 / 120.0)))
         .add_plugins(Shape2dPlugin::default())
         .insert_resource(ClearColor(bevy::prelude::Color::Srgba(Srgba { red: 84.0 / 255.0, green: 18.0 / 255.0, blue: 18.0 / 255.0, alpha: 1.0 })))
         .add_systems(Startup, setup )
@@ -239,6 +258,12 @@ fn main() {
 
     #[cfg(feature = "fps_overlay")]
     app.add_plugins(FpsOverlayPlugin::default());
+
+    #[cfg(target_arch = "wasm32")]
+    app.insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f64(1.0 / 50.0)));
+
+    #[cfg(not(target_arch = "wasm32"))]
+    app.insert_resource(Time::<Fixed>::from_duration(Duration::from_secs_f64(1.0 / 120.0)));
 
     app.run();
 }
