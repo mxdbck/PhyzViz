@@ -1,5 +1,8 @@
 PhyzViz : library of small apps to vizualize simulations of different mathematical models of physical systems (such as those seen in this graduate course : https://uclouvain.be/en-cours-2025-linma2370). 
 
+### Example :
+![Example Image](assets/lorenz.png)
+
 ### Goals
  - [x] Simple pendulum numerically integrated bevy example
  - [x] Get wasm compilation working

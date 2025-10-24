@@ -108,12 +108,14 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         max_points: 1000,
         color: Color::linear_rgba(10.0, 8.7, 10.0, 1.0),
         fade_to_transparent: true,
+        ..Default::default()
     });
     spawn_mesh_ribbon(&mut commands, &mut meshes, &mut materials, "bob2_mesh_ribbon".to_string(), MeshRibbonParams {
         width: 3.0,
         max_points: 1000,
         color: Color::linear_rgba(10.0, 8.7, 10.0, 1.0),
         fade_to_transparent: true,
+        ..Default::default()
     });
 
     let mut sprite = Sprite::from_image(asset_server.load("double-pendulum.png"));

@@ -4,12 +4,19 @@ use bevy::render::render_resource::PrimitiveTopology;
 use bevy::asset::RenderAssetUsages;
 use std::collections::VecDeque;
 
+#[derive(Debug, Clone)]
+pub enum InterpolationType {
+    Poly(f32),
+}
+
 #[derive(Clone)]
 pub struct MeshRibbonParams {
     pub width: f32,
     pub max_points: usize,
     pub color: Color,
     pub fade_to_transparent: bool,
+    pub width_variation: InterpolationType,
+    pub transparency_variance: InterpolationType,
 }
 
 impl Default for MeshRibbonParams {
@@ -19,6 +26,8 @@ impl Default for MeshRibbonParams {
             max_points: 100,
             color: Color::srgb(1.0, 0.3, 0.1),
             fade_to_transparent: true,
+            width_variation: InterpolationType::Poly(2.0),
+            transparency_variance: InterpolationType::Poly(10.0),
         }
     }
 }
@@ -107,8 +116,16 @@ pub fn update_ribbon_mesh(
 
         let half_width = width * 0.5;
 
-        let left = *pos + perpendicular * half_width * progress.powi(2);
-        let right = *pos - perpendicular * half_width * progress.powi(2);
+        let width_progress = match &ribbon.params.width_variation {
+            InterpolationType::Poly(power) => progress.powf(*power),
+        };
+
+        let transparency_progress = match &ribbon.params.transparency_variance {
+            InterpolationType::Poly(power) => progress.powf(*power),
+        };
+
+        let left = *pos + perpendicular * half_width * width_progress;
+        let right = *pos - perpendicular * half_width * width_progress;
 
         vertices.push([left.x, left.y, left.z]);
         vertices.push([right.x, right.y, right.z]);
@@ -119,7 +136,7 @@ pub fn update_ribbon_mesh(
 
         // Colors with fade
         let alpha = if ribbon.params.fade_to_transparent {
-            progress.powi(10) / 4.0
+            transparency_progress / 4.0
         } else {
             1.0 / 4.0
         };

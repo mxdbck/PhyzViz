@@ -67,6 +67,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         max_points: 1000,
         color: Color::linear_rgba(10.0, 8.7, 10.0, 1.0),
         fade_to_transparent: true,
+        ..Default::default()
     });
 
     // TODO: Create a simple-pendulum.png with the equation and add it to assets/
