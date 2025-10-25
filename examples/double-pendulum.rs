@@ -7,6 +7,7 @@ use std::time::Duration;
 use PhyzViz::utils::ODEs;
 use PhyzViz::utils::rk4::{self, RK4Prealloc};
 use PhyzViz::utils::mesh_ribbon::{spawn_mesh_ribbon, MeshRibbonParams, add_ribbon_position};
+use PhyzViz::utils::graph::{spawn_graph_widget, GraphParams, draw_graph_widget};
 use bevy::{
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
     post_process::bloom::{Bloom},
@@ -126,12 +127,22 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         sprite,
         Transform::from_xyz(0.0, 250.0, -1.0).with_scale(Vec3::splat(0.25)),
     ));
+
+    // Spawn graph widget to track energy or position
+    spawn_graph_widget(&mut commands, GraphParams {
+        position: Vec2::new(-600.0, 320.0),
+        size: Vec2::new(250.0, 150.0),
+        max_points: 300,
+        line_color: Color::linear_rgba(3.0, 0.6, 0.2, 1.0),
+        label: "Bob2 Y-Position".to_string(),
+        ..Default::default()
+    });
 }
 
 
 fn step_pendulum(time_fixed: Res<Time<Fixed>>, mut state: ResMut<PendulumState>) {
-    let dt = time_fixed.delta_secs() / 2.0;
-    let t = time_fixed.elapsed_secs() / 2.0;
+    let dt = time_fixed.delta_secs() / 8.0;
+    let t = time_fixed.elapsed_secs() / 8.0;
 
     // let y0 = vec![state.theta1, state.omega1, state.theta2, state.omega2];
     state.prealloc.y0[0] = state.theta1;
@@ -151,6 +162,8 @@ fn draw_pendulum(
     mut painter: ShapePainter,
     state: Res<PendulumState>,
     mut q_mesh: Query<(&mut PhyzViz::utils::mesh_ribbon::MeshRibbon, &Name)>,
+    mut q_graph: Query<&mut PhyzViz::utils::graph::GraphWidget>,
+    time_fixed: Res<Time<Fixed>>,
 ) {
     painter.scale(Vec3::splat(RENDER_SCALE));
 
@@ -223,6 +236,12 @@ fn draw_pendulum(
         };
         ribbon.current_position = bob_pos;
     }
+
+    // Update graph with bob2's y-position
+    for mut graph in q_graph.iter_mut() {
+        let bob2_y = -(bob1_pos.y + bob2_pos.y) * RENDER_SCALE;
+        graph.add_point(time_fixed.elapsed_secs(), bob2_y);
+    }
 }
 
 fn main() {
@@ -256,7 +275,8 @@ fn main() {
         .add_systems(FixedUpdate, step_pendulum)
         // Rendering on the variable-rate Update schedule (interpolation optional)
         .add_systems(Update, draw_pendulum)
-        .add_systems(Update, add_ribbon_position);
+        .add_systems(Update, add_ribbon_position)
+        .add_systems(Update, draw_graph_widget);
 
     #[cfg(feature = "fps_overlay")]
     app.add_plugins(FpsOverlayPlugin::default());
