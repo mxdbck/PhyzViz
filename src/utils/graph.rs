@@ -14,16 +14,31 @@ pub struct GraphParams {
     pub line_color: Color,
     /// Color of gridlines
     pub grid_color: Color,
-    /// Number of horizontal gridlines
-    pub num_horizontal_lines: usize,
-    /// Number of vertical gridlines
-    pub num_vertical_lines: usize,
+    /// X-axis gridline configuration
+    pub x_gridlines: GridlineConfig,
+    /// Y-axis gridline configuration
+    pub y_gridlines: GridlineConfig,
+    /// Origin point for gridline alignment (gridlines will be multiples of this)
+    pub gridline_origin: Vec2,
     /// Distance threshold from edge to trigger expansion (as fraction of range, e.g., 0.1 = 10%)
     pub expansion_threshold: f32,
     /// Minimum y-range to prevent division by zero
     pub min_y_range: f32,
     /// Label for the graph
     pub label: String,
+}
+
+#[derive(Clone)]
+pub enum GridlineConfig {
+    /// Fixed spacing between gridlines (in data units)
+    Fixed { spacing: f32 },
+    /// Dynamic spacing based on data range
+    Dynamic {
+        /// Minimum spacing between gridlines (in data units)
+        min_spacing: f32,
+        /// Number of gridlines to target
+        num_lines: usize,
+    },
 }
 
 impl Default for GraphParams {
@@ -34,8 +49,12 @@ impl Default for GraphParams {
             max_points: 200,
             line_color: Color::linear_rgba(3.0, 0.6, 0.2, 1.0),
             grid_color: Color::srgba(0.5, 0.5, 0.5, 0.5),
-            num_horizontal_lines: 3,
-            num_vertical_lines: 3,
+            x_gridlines: GridlineConfig::Fixed { spacing: 1.0 },
+            y_gridlines: GridlineConfig::Dynamic {
+                min_spacing: 10.0,
+                num_lines: 4,
+            },
+            gridline_origin: Vec2::ZERO,
             expansion_threshold: 0.1,
             min_y_range: 0.1,
             label: "Graph".to_string(),
@@ -159,41 +178,59 @@ fn draw_single_graph(painter: &mut ShapePainter, graph: &GraphWidget) {
     let pos = graph.params.position;
     let size = graph.params.size;
 
-    // Draw background rectangle
-    painter.set_color(Color::srgba(0.1, 0.1, 0.1, 0.7));
-    painter.thickness = 1.0;
-    painter.hollow = true;
-    painter.transform = Transform::from_translation(Vec3::new(pos.x + size.x / 2.0, pos.y - size.y / 2.0, 0.0));
-
-    // painter.rect(Vec3::new(pos.x + size.x / 2.0, pos.y - size.y / 2.0, 0.0), Vec2::new(size.x, size.y));
-    painter.rect(Vec2::new(size.x, size.y));
-
-    painter.transform = Transform::IDENTITY;
-
-    // Draw horizontal gridlines with labels
     painter.set_color(graph.params.grid_color);
-    painter.thickness = 0.5;
-    for i in 0..=graph.params.num_horizontal_lines {
-        let t = i as f32 / graph.params.num_horizontal_lines as f32;
-        let y_value = graph.y_min + t * (graph.y_max - graph.y_min);
-        let screen_pos = graph.to_screen(graph.x_min, y_value);
-        
-        painter.line(
-            Vec3::new(pos.x, screen_pos.y, 0.0),
-            Vec3::new(pos.x + size.x, screen_pos.y, 0.0),
-        );
+    painter.thickness = 0.25;
+
+    // Draw horizontal gridlines
+    let y_range = graph.y_max - graph.y_min;
+    let y_spacing = match &graph.params.y_gridlines {
+        GridlineConfig::Fixed { spacing } => *spacing,
+        GridlineConfig::Dynamic { min_spacing, num_lines } => {
+            let target_spacing = y_range / *num_lines as f32;
+            let multiplier = (target_spacing / min_spacing).ceil().max(1.0);
+            min_spacing * multiplier
+        }
+    };
+
+    let y_origin = graph.params.gridline_origin.y;
+    let first_y_aligned = y_origin + ((graph.y_min - y_origin) / y_spacing).floor() * y_spacing;
+    
+    let mut y_value = first_y_aligned;
+    while y_value <= graph.y_max {
+        if y_value >= graph.y_min {
+            let screen_pos = graph.to_screen(graph.x_min, y_value);
+            painter.line(
+                Vec3::new(pos.x, screen_pos.y, 0.0),
+                Vec3::new(pos.x + size.x, screen_pos.y, 0.0),
+            );
+        }
+        y_value += y_spacing;
     }
 
     // Draw vertical gridlines
-    for i in 0..=graph.params.num_vertical_lines {
-        let t = i as f32 / graph.params.num_vertical_lines as f32;
-        let x_value = graph.x_min + t * (graph.x_max - graph.x_min);
-        let screen_pos = graph.to_screen(x_value, graph.y_min);
-        
-        painter.line(
-            Vec3::new(screen_pos.x, pos.y, 0.0),
-            Vec3::new(screen_pos.x, pos.y - size.y, 0.0),
-        );
+    let x_range = graph.x_max - graph.x_min;
+    let x_spacing = match &graph.params.x_gridlines {
+        GridlineConfig::Fixed { spacing } => *spacing,
+        GridlineConfig::Dynamic { min_spacing, num_lines } => {
+            let target_spacing = x_range / *num_lines as f32;
+            let multiplier = (target_spacing / min_spacing).ceil().max(1.0);
+            min_spacing * multiplier
+        }
+    };
+
+    let x_origin = graph.params.gridline_origin.x;
+    let first_x_aligned = x_origin + ((graph.x_min - x_origin) / x_spacing).floor() * x_spacing + x_spacing / 4.0;
+    
+    let mut x_value = first_x_aligned;
+    while x_value <= graph.x_max {
+        if x_value >= graph.x_min {
+            let screen_pos = graph.to_screen(x_value, graph.y_min);
+            painter.line(
+                Vec3::new(screen_pos.x, pos.y, 0.0),
+                Vec3::new(screen_pos.x, pos.y - size.y, 0.0),
+            );
+        }
+        x_value += x_spacing;
     }
 
     // Draw the data line

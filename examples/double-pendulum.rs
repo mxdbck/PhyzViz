@@ -7,7 +7,7 @@ use std::time::Duration;
 use PhyzViz::utils::ODEs;
 use PhyzViz::utils::rk4::{self, RK4Prealloc};
 use PhyzViz::utils::mesh_ribbon::{spawn_mesh_ribbon, MeshRibbonParams, add_ribbon_position};
-use PhyzViz::utils::graph::{spawn_graph_widget, GraphParams, draw_graph_widget};
+use PhyzViz::utils::graph::{spawn_graph_widget, GraphParams, GridlineConfig, draw_graph_widget};
 use bevy::{
     core_pipeline::tonemapping::{DebandDither, Tonemapping},
     post_process::bloom::{Bloom},
@@ -82,6 +82,42 @@ impl ODEs::ODEFunc for DoublePendulum {
     }
 }
 
+impl DoublePendulum {
+    /// Calculate kinetic energy of the system
+    fn kinetic_energy(&self, theta1: f32, omega1: f32, theta2: f32, omega2: f32) -> (f32, f32) {
+        let m1 = self.m1;
+        let m2 = self.m2;
+        let l1 = self.l1;
+        let l2 = self.l2;
+        
+        let delta = theta1 - theta2;
+        
+        // Kinetic energy formula for double pendulum
+        let ke1 = 0.5 * m1 * (l1 * omega1).powi(2);
+        let ke2 = 0.5 * m2 * (
+            (l1 * omega1).powi(2) + (l2 * omega2).powi(2) 
+            + 2.0 * l1 * l2 * omega1 * omega2 * delta.cos()
+        );
+
+        (ke1, ke2)
+    }
+    
+    /// Calculate potential energy of the system
+    fn potential_energy(&self, theta1: f32, theta2: f32) -> (f32, f32) {
+        let m1 = self.m1;
+        let m2 = self.m2;
+        let l1 = self.l1;
+        let l2 = self.l2;
+        let g = self.g;
+        
+        // Taking the pivot as zero potential energy reference
+        let h1 = -l1 * theta1.cos();
+        let h2 = -l1 * theta1.cos() - l2 * theta2.cos();
+
+        (m1 * g * h1, m2 * g * h2)
+    }
+}
+
 
 fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>, asset_server: Res<AssetServer>) {
     commands.spawn((
@@ -101,7 +137,8 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         func: Box::new(DoublePendulum { m1: 1.0, m2: 1.0, l1: 1.0, l2: 1.0, g: 9.81 }),
     };
 
-    commands.insert_resource(PendulumState { theta1: 2.899002795870406, omega1: 0.0, theta2: 1.913720799888307, omega2: 0.0, params: DoublePendulum { m1: 1.0, m2: 1.0, l1: 1.0, l2: 1.0, g: 9.81 }, prealloc });
+    // commands.insert_resource(PendulumState { theta1: 2.899002795870406, omega1: 0.0, theta2: 1.913720799888307, omega2: 0.0, params: DoublePendulum { m1: 1.0, m2: 1.0, l1: 1.0, l2: 1.0, g: 9.81 }, prealloc });
+    commands.insert_resource(PendulumState { theta1: 2.0, omega1: 0.0, theta2: 2.0, omega2: 0.0, params: DoublePendulum { m1: 1.0, m2: 1.0, l1: 1.0, l2: 1.0, g: 9.81 }, prealloc });
 
     // Spawn mesh ribbons (comment out particle ribbons to compare)
     spawn_mesh_ribbon(&mut commands, &mut meshes, &mut materials, "bob1_mesh_ribbon".to_string(), MeshRibbonParams {
@@ -135,6 +172,33 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         max_points: 600,
         line_color: Color::linear_rgba(3.0, 0.6, 0.2, 1.0),
         label: "Bob2 Y-Position".to_string(),
+        x_gridlines: GridlineConfig::Fixed { spacing: 2.0 },
+        y_gridlines: GridlineConfig::Dynamic {
+            min_spacing: 20.0,
+            num_lines: 4,
+        },
+        gridline_origin: Vec2::ZERO,
+        ..Default::default()
+    });
+
+    // Spawn state space plot (KE vs PE)
+    spawn_graph_widget(&mut commands, GraphParams {
+        position: Vec2::new(350.0, 320.0),
+        size: Vec2::new(250.0, 150.0),
+        max_points: 200,
+        line_color: Color::linear_rgba(0.2, 3.0, 0.6, 1.0),
+        grid_color: Color::srgba(0.5, 0.5, 0.5, 0.3),
+        label: "State Space: PE1 vs PE2".to_string(),
+        x_gridlines: GridlineConfig::Dynamic {
+            min_spacing: 5.0,
+            num_lines: 4,
+        },
+        y_gridlines: GridlineConfig::Dynamic {
+            min_spacing: 5.0,
+            num_lines: 4,
+        },
+        gridline_origin: Vec2::ZERO,
+        expansion_threshold: 0.15,
         ..Default::default()
     });
 }
@@ -237,10 +301,21 @@ fn draw_pendulum(
         ribbon.current_position = bob_pos;
     }
 
-    // Update graph with bob2's y-position
-    for mut graph in q_graph.iter_mut() {
-        let bob2_y = -(bob1_pos.y + bob2_pos.y) * RENDER_SCALE;
+    // Update graphs
+    let bob2_y = -(bob1_pos.y + bob2_pos.y) * RENDER_SCALE;
+    let ke = state.params.kinetic_energy(state.theta1, state.omega1, state.theta2, state.omega2);
+    let pe = state.params.potential_energy(state.theta1, state.theta2);
+
+    let mut graph_iter = q_graph.iter_mut();
+    
+    // First graph: bob2 y-position vs time
+    if let Some(mut graph) = graph_iter.next() {
         graph.add_point(time_fixed.elapsed_secs(), bob2_y);
+    }
+    
+    // Second graph: state space (KE vs PE)
+    if let Some(mut graph) = graph_iter.next() {
+        graph.add_point(pe.0, pe.1);
     }
 }
 
