@@ -132,7 +132,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
     spawn_graph_widget(&mut commands, GraphParams {
         position: Vec2::new(-600.0, 320.0),
         size: Vec2::new(250.0, 150.0),
-        max_points: 300,
+        max_points: 600,
         line_color: Color::linear_rgba(3.0, 0.6, 0.2, 1.0),
         label: "Bob2 Y-Position".to_string(),
         ..Default::default()
@@ -141,8 +141,8 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
 
 
 fn step_pendulum(time_fixed: Res<Time<Fixed>>, mut state: ResMut<PendulumState>) {
-    let dt = time_fixed.delta_secs() / 8.0;
-    let t = time_fixed.elapsed_secs() / 8.0;
+    let dt = time_fixed.delta_secs() / 2.0;
+    let t = time_fixed.elapsed_secs() / 2.0;
 
     // let y0 = vec![state.theta1, state.omega1, state.theta2, state.omega2];
     state.prealloc.y0[0] = state.theta1;
