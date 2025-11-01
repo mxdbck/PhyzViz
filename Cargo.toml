@@ -7,6 +7,7 @@ edition = "2024"
 log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
 bevy = { version = "0.17.2", features = ["bevy_dev_tools"] }
 bevy_vector_shapes = { version = "0.11" }
+rapier2d-f64 = "0.30.1"
 
 [profile.release-wasm]
 inherits = "release"

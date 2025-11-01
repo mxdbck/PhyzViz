@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::sprite::Anchor;
 use bevy_vector_shapes::prelude::*;
 use std::collections::VecDeque;
 
@@ -26,6 +27,13 @@ pub struct GraphParams {
     pub min_y_range: f32,
     /// Label for the graph
     pub label: String,
+    /// Show current values in top right
+    pub show_current_x: bool,
+    pub show_current_y: bool,
+    /// Text color
+    pub text_color: Color,
+    /// Font size for labels
+    pub font_size: f32,
 }
 
 #[derive(Clone)]
@@ -58,6 +66,10 @@ impl Default for GraphParams {
             expansion_threshold: 0.1,
             min_y_range: 0.1,
             label: "Graph".to_string(),
+            show_current_x: false,
+            show_current_y: true,
+            text_color: Color::srgba(0.9, 0.9, 0.9, 1.0),
+            font_size: 12.0,
         }
     }
 }
@@ -72,6 +84,8 @@ pub struct GraphWidget {
     pub x_max: f32,
     pub y_min: f32,
     pub y_max: f32,
+    /// Text entity handles for cleanup and updates
+    pub text_entities: Vec<Entity>,
 }
 
 impl GraphWidget {
@@ -83,6 +97,7 @@ impl GraphWidget {
             x_max: 10.0,
             y_min: -1.0,
             y_max: 1.0,
+            text_entities: Vec::new(),
         }
     }
 
@@ -166,22 +181,33 @@ impl GraphWidget {
 
 /// System to draw the graph widget
 pub fn draw_graph_widget(
+    mut commands: Commands,
     mut painter: ShapePainter,
-    query: Query<&GraphWidget>,
+    mut query: Query<(Entity, &mut GraphWidget)>,
 ) {
-    for graph in query.iter() {
-        draw_single_graph(&mut painter, graph);
+    for (entity, mut graph) in query.iter_mut() {
+        // Clean up old text entities
+        for text_entity in graph.text_entities.drain(..) {
+            commands.entity(text_entity).despawn();
+        }
+        
+        draw_single_graph(&mut commands, &mut painter, &mut graph, entity);
     }
 }
 
-fn draw_single_graph(painter: &mut ShapePainter, graph: &GraphWidget) {
+fn draw_single_graph(
+    commands: &mut Commands,
+    painter: &mut ShapePainter,
+    graph: &mut GraphWidget,
+    _parent_entity: Entity,
+) {
     let pos = graph.params.position;
     let size = graph.params.size;
 
     painter.set_color(graph.params.grid_color);
     painter.thickness = 0.25;
 
-    // Draw horizontal gridlines
+    // Draw horizontal gridlines with labels
     let y_range = graph.y_max - graph.y_min;
     let y_spacing = match &graph.params.y_gridlines {
         GridlineConfig::Fixed { spacing } => *spacing,
@@ -196,6 +222,7 @@ fn draw_single_graph(painter: &mut ShapePainter, graph: &GraphWidget) {
     let first_y_aligned = y_origin + ((graph.y_min - y_origin) / y_spacing).floor() * y_spacing;
     
     let mut y_value = first_y_aligned;
+    let mut y_labels = Vec::new();
     while y_value <= graph.y_max {
         if y_value >= graph.y_min {
             let screen_pos = graph.to_screen(graph.x_min, y_value);
@@ -203,11 +230,12 @@ fn draw_single_graph(painter: &mut ShapePainter, graph: &GraphWidget) {
                 Vec3::new(pos.x, screen_pos.y, 0.0),
                 Vec3::new(pos.x + size.x, screen_pos.y, 0.0),
             );
+            y_labels.push((y_value, screen_pos.y));
         }
         y_value += y_spacing;
     }
 
-    // Draw vertical gridlines
+    // Draw vertical gridlines with labels
     let x_range = graph.x_max - graph.x_min;
     let x_spacing = match &graph.params.x_gridlines {
         GridlineConfig::Fixed { spacing } => *spacing,
@@ -219,9 +247,10 @@ fn draw_single_graph(painter: &mut ShapePainter, graph: &GraphWidget) {
     };
 
     let x_origin = graph.params.gridline_origin.x;
-    let first_x_aligned = x_origin + ((graph.x_min - x_origin) / x_spacing).floor() * x_spacing + x_spacing / 4.0;
+    let first_x_aligned = (x_origin + x_spacing) + ((graph.x_min - x_origin) / x_spacing).floor() * x_spacing;
     
     let mut x_value = first_x_aligned;
+    let mut x_labels = Vec::new();
     while x_value <= graph.x_max {
         if x_value >= graph.x_min {
             let screen_pos = graph.to_screen(x_value, graph.y_min);
@@ -229,6 +258,7 @@ fn draw_single_graph(painter: &mut ShapePainter, graph: &GraphWidget) {
                 Vec3::new(screen_pos.x, pos.y, 0.0),
                 Vec3::new(screen_pos.x, pos.y - size.y, 0.0),
             );
+            x_labels.push((x_value, screen_pos.x));
         }
         x_value += x_spacing;
     }
@@ -250,6 +280,83 @@ fn draw_single_graph(painter: &mut ShapePainter, graph: &GraphWidget) {
                 Vec3::new(p2.x, p2.y, 0.1),
             );
         }
+    }
+
+    // Spawn text labels
+    let font_size = graph.params.font_size;
+    let text_color = graph.params.text_color;
+    
+    // Title (top left)
+    let title_entity = commands.spawn((
+        Text2d::new(&graph.params.label),
+        TextFont {
+            font_size,
+            ..default()
+        },
+        TextColor(text_color),
+        Transform::from_translation(Vec3::new(pos.x + 5.0, pos.y + 15.0, 0.2)),
+        Anchor::TOP_LEFT,
+    )).id();
+    graph.text_entities.push(title_entity);
+
+    // Current values (top right)
+    if !graph.data.is_empty() {
+        let (current_x, current_y) = graph.data.back().copied().unwrap();
+        let mut current_text = String::new();
+        
+        if graph.params.show_current_x && graph.params.show_current_y {
+            current_text = format!("({:.2}, {:.2})", current_x, current_y);
+        } else if graph.params.show_current_x {
+            current_text = format!("{:.2}", current_x);
+        } else if graph.params.show_current_y {
+            current_text = format!("{:.2}", current_y);
+        }
+        
+        if !current_text.is_empty() {
+            let current_entity = commands.spawn((
+                Text2d::new(current_text),
+                TextFont {
+                    font_size,
+                    ..default()
+                },
+                TextColor(text_color),
+                Transform::from_translation(Vec3::new(pos.x + size.x - 5.0, pos.y + 15.0, 0.2)),
+                Anchor::TOP_RIGHT,
+            )).id();
+            graph.text_entities.push(current_entity);
+        }
+    }
+
+    // Y-axis labels (right side, below gridline, right-aligned to graph edge)
+    let right_x = pos.x + size.x;
+    for (value, y_pos) in y_labels {
+        let label_entity = commands.spawn((
+            Text2d::new(format!("{:.1}", value)),
+            TextFont {
+                font_size: font_size * 0.8,
+                ..default()
+            },
+            TextColor(graph.params.grid_color),
+            Transform::from_translation(Vec3::new(right_x, y_pos - 3.0, 0.2)),
+            Anchor::TOP_RIGHT,
+        )).id();
+        graph.text_entities.push(label_entity);
+    }
+
+    // X-axis labels (bottom, aligned to gridlines)
+    let bottom_y = pos.y - size.y;
+    for (value, x_pos) in x_labels {
+        let label_entity = commands.spawn((
+            Text2d::new(format!("{:.1}", value)),
+            TextFont {
+                font_size: font_size * 0.8,
+                ..default()
+            },
+            TextColor(graph.params.grid_color),
+            Transform::from_translation(Vec3::new(x_pos, bottom_y - 3.0, 0.2)),
+            Anchor::TOP_CENTER,
+        )).id();
+        graph.text_entities.push(label_entity);
     }
 }
 

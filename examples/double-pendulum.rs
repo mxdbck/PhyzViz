@@ -172,12 +172,15 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         max_points: 600,
         line_color: Color::linear_rgba(3.0, 0.6, 0.2, 1.0),
         label: "Bob2 Y-Position".to_string(),
-        x_gridlines: GridlineConfig::Fixed { spacing: 2.0 },
+        x_gridlines: GridlineConfig::Fixed { spacing: 4.0 },
         y_gridlines: GridlineConfig::Dynamic {
             min_spacing: 20.0,
             num_lines: 4,
         },
         gridline_origin: Vec2::ZERO,
+        show_current_x: false,
+        show_current_y: true,
+        font_size: 14.0,
         ..Default::default()
     });
 
@@ -188,9 +191,9 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         max_points: 200,
         line_color: Color::linear_rgba(0.2, 3.0, 0.6, 1.0),
         grid_color: Color::srgba(0.5, 0.5, 0.5, 0.3),
-        label: "State Space: PE1 vs PE2".to_string(),
+        label: "PE1 vs PE2".to_string(),
         x_gridlines: GridlineConfig::Dynamic {
-            min_spacing: 5.0,
+            min_spacing: 1.0,
             num_lines: 4,
         },
         y_gridlines: GridlineConfig::Dynamic {
@@ -199,6 +202,9 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         },
         gridline_origin: Vec2::ZERO,
         expansion_threshold: 0.15,
+        show_current_x: true,
+        show_current_y: true,
+        font_size: 14.0,
         ..Default::default()
     });
 }
